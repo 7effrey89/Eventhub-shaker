@@ -5,15 +5,19 @@ let config = {
     sasKey: ''
 };
 
+// Shake detection constants
+const SHAKE_THRESHOLD = 15; // m/s² magnitude threshold for shake detection
+const SHAKE_COOLDOWN = 500; // ms between shake detections
+const SHAKE_INTENSITY_HIGH = 25; // m/s² for high intensity
+const SHAKE_INTENSITY_MEDIUM = 18; // m/s² for medium intensity
+
 let state = {
     isActive: false,
     shakeCount: 0,
     eventCount: 0,
     lastAcceleration: { x: 0, y: 0, z: 0 },
     currentAcceleration: { x: 0, y: 0, z: 0 },
-    shakeThreshold: 15, // m/s² magnitude threshold for shake detection
-    lastShakeTime: 0,
-    shakeCooldown: 500 // ms between shake detections
+    lastShakeTime: 0
 };
 
 // DOM elements
@@ -155,7 +159,7 @@ function handleDeviceMotion(event) {
     
     // Detect shake
     const now = Date.now();
-    if (deltaMagnitude > state.shakeThreshold && (now - state.lastShakeTime) > state.shakeCooldown) {
+    if (deltaMagnitude > SHAKE_THRESHOLD && (now - state.lastShakeTime) > SHAKE_COOLDOWN) {
         state.lastShakeTime = now;
         state.shakeCount++;
         shakeCountEl.textContent = state.shakeCount;
@@ -180,9 +184,9 @@ async function sendTelemetry(acceleration, delta, magnitude, deltaMagnitude) {
     
     // Determine shake intensity based on delta magnitude
     let shakeIntensity = 'low';
-    if (deltaMagnitude > 25) {
+    if (deltaMagnitude > SHAKE_INTENSITY_HIGH) {
         shakeIntensity = 'high';
-    } else if (deltaMagnitude > 18) {
+    } else if (deltaMagnitude > SHAKE_INTENSITY_MEDIUM) {
         shakeIntensity = 'medium';
     }
     
@@ -207,7 +211,7 @@ async function sendTelemetry(acceleration, delta, magnitude, deltaMagnitude) {
     
     try {
         // Send to EventHub via REST API
-        const response = await fetch(`${config.eventhubUrl}/messages`, {
+        const response = await fetch(`${config.eventhubUrl}/messages?api-version=2014-01`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -221,12 +225,11 @@ async function sendTelemetry(acceleration, delta, magnitude, deltaMagnitude) {
             eventCountEl.textContent = state.eventCount;
             logEvent('success', `Shake detected! Intensity: ${shakeIntensity} (Δ${deltaMagnitude.toFixed(2)} m/s²)`);
         } else {
-            const errorText = await response.text();
-            logEvent('error', `Failed to send: ${response.status} - ${errorText.substring(0, 50)}`);
-            console.error('EventHub error:', response.status, errorText);
+            logEvent('error', `Failed to send event: HTTP ${response.status}`);
+            console.error('EventHub error:', response.status, await response.text());
         }
     } catch (error) {
-        logEvent('error', `Network error: ${error.message}`);
+        logEvent('error', `Network error: Unable to reach EventHub`);
         console.error('Error sending telemetry:', error);
     }
 }
