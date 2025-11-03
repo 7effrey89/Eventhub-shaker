@@ -106,7 +106,7 @@ az webapp show \
   --output tsv
 ```
 
-Your app will be available at: `https://eventhub-shaker-app.azurewebsites.net`
+Your app will be available at: `https://[your-app-name].azurewebsites.net` (replace `[your-app-name]` with the actual name you used in Step 4)
 
 **Note:** This is a client-side web application. Users will configure their EventHub credentials (URL and SAS token) directly through the web UI after accessing the application. The credentials are stored in browser memory only and are not persisted.
 
