@@ -32,7 +32,7 @@ az group create \
 az staticwebapp create \
   --name eventhub-shaker \
   --resource-group eventhub-shaker-rg \
-  --source https://github.com/YOUR-USERNAME/Eventhub-shaker \
+  --source https://github.com/7effrey89/Eventhub-shaker \
   --location westeurope \
   --branch main \
   --app-location "/" \
