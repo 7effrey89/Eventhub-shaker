@@ -11,7 +11,7 @@ This guide walks you through deploying the EventHub Shaker application to Azure 
 
 ## 🚀 Deploying to Azure App Service
 
-Azure App Service provides production-ready hosting with HTTPS, custom domains, scaling, and integrated authentication. This application is a web application with UI components that requires proper hosting with environment variable support.
+Azure App Service provides production-ready hosting with HTTPS, custom domains, scaling, and integrated authentication. This is a client-side web application with UI components that can be hosted on Azure App Service for production use.
 
 ### Step 1: Login and Set Subscription
 
@@ -53,7 +53,7 @@ az appservice plan create \
 ### Step 4: Create Web App
 
 ```bash
-# Create the web app with Node.js runtime (for serving static content)
+# Create the web app with Node.js runtime for hosting the application
 az webapp create \
   --name eventhub-shaker-app \
   --resource-group eventhub-shaker-rg \
@@ -62,6 +62,8 @@ az webapp create \
 
 # Note: Replace 'eventhub-shaker-app' with a unique name as it must be globally unique
 ```
+
+**Important:** After creating the web app, you'll need to configure it to serve static files. The simplest approach is to ensure your repository includes a basic Node.js server or use the default static file serving provided by Azure App Service.
 
 ### Step 5: Configure Deployment from GitHub
 
@@ -93,47 +95,7 @@ az webapp deployment source config-local-git \
 # git push azure main
 ```
 
-### Step 6: Configure Environment Variables
-
-The application can optionally use environment variables for default configuration. While the app allows users to configure these values through the UI, you can set defaults using App Settings.
-
-#### Using Azure Portal:
-
-1. Navigate to your App Service in Azure Portal
-2. Go to **Settings** → **Configuration** → **Application settings**
-3. Click **+ New application setting** and add:
-   - **Name**: `SAS_KEY`
-   - **Value**: Your EventHub SAS token (starts with `SharedAccessSignature sr=...`)
-4. Click **+ New application setting** again:
-   - **Name**: `EVENTSTREAM_CONNECTION`
-   - **Value**: Your EventHub URL (e.g., `https://[namespace].servicebus.windows.net/[eventhub-name]`)
-5. Click **Save** at the top
-
-#### Using Azure CLI:
-
-```bash
-# Set SAS_KEY environment variable
-az webapp config appsettings set \
-  --name eventhub-shaker-app \
-  --resource-group eventhub-shaker-rg \
-  --settings SAS_KEY="SharedAccessSignature sr=..."
-
-# Set EVENTSTREAM_CONNECTION environment variable
-az webapp config appsettings set \
-  --name eventhub-shaker-app \
-  --resource-group eventhub-shaker-rg \
-  --settings EVENTSTREAM_CONNECTION="https://[namespace].servicebus.windows.net/[eventhub-name]"
-
-# View all configured settings
-az webapp config appsettings list \
-  --name eventhub-shaker-app \
-  --resource-group eventhub-shaker-rg \
-  --output table
-```
-
-**Note:** These environment variables are optional. Users can still enter their own EventHub credentials through the web UI when using the application.
-
-### Step 7: Access Your App
+### Step 6: Access Your App
 
 ```bash
 # Get the URL of your deployed app
@@ -146,7 +108,9 @@ az webapp show \
 
 Your app will be available at: `https://eventhub-shaker-app.azurewebsites.net`
 
-### Step 8: Configure Custom Domain (Optional)
+**Note:** This is a client-side web application. Users will configure their EventHub credentials (URL and SAS token) directly through the web UI after accessing the application. The credentials are stored in browser memory only and are not persisted.
+
+### Step 7: Configure Custom Domain (Optional)
 
 ```bash
 # Add a custom domain
@@ -251,30 +215,14 @@ The SAS token format should be:
 SharedAccessSignature sr=https%3A%2F%2Fshake-telemetry-ns.servicebus.windows.net%2Fphone-shakes&sig=<signature>&se=<expiry>&skn=SendPolicy
 ```
 
-You can generate a complete SAS token using Azure Portal:
-1. Go to your EventHub → Shared access policies → SendPolicy
-2. Copy the **Primary key** value - this is what you'll use as the SAS_KEY
+**For the web application:**
+1. The EventHub URL will be: `https://shake-telemetry-ns.servicebus.windows.net/phone-shakes`
+2. The SAS token can be obtained from Azure Portal:
+   - Go to your EventHub → Shared access policies → SendPolicy
+   - Copy the **Connection string–primary key** value
+   - Extract the SAS token portion or generate a full SAS token using Azure Portal's "Generate SAS token" feature
 
-### Step 6: Configure Web App with EventHub Settings
-
-Now that you have your EventHub details, configure them in your web app:
-
-#### Using Azure Portal:
-1. Go to your App Service → Configuration → Application settings
-2. Add `SAS_KEY` with your SAS token
-3. Add `EVENTSTREAM_CONNECTION` with your EventHub URL
-4. Save changes
-
-#### Using Azure CLI:
-```bash
-# Set both environment variables at once
-az webapp config appsettings set \
-  --name eventhub-shaker-app \
-  --resource-group eventhub-shaker-rg \
-  --settings \
-    EVENTSTREAM_CONNECTION="https://shake-telemetry-ns.servicebus.windows.net/phone-shakes" \
-    SAS_KEY="SharedAccessSignature sr=..."
-```
+Users will enter these values (EventHub URL and SAS token) directly into the web application's configuration form when they first access the app.
 
 ---
 
@@ -407,18 +355,42 @@ az webapp deployment list \
   --resource-group eventhub-shaker-rg
 ```
 
-### Environment Variables Not Working
-```bash
-# Verify environment variables are set
-az webapp config appsettings list \
-  --name eventhub-shaker-app \
-  --resource-group eventhub-shaker-rg \
-  --output table
+### Static File Serving Issues
+If your web app doesn't display correctly, you may need to add a simple Node.js server. Create a `server.js` file in your repository:
 
-# Restart the web app after changing settings
-az webapp restart \
-  --name eventhub-shaker-app \
-  --resource-group eventhub-shaker-rg
+```javascript
+const express = require('express');
+const path = require('path');
+const app = express();
+
+// Serve static files from the current directory
+app.use(express.static(__dirname));
+
+// Serve index.html for the root path
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+const port = process.env.PORT || 8080;
+app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
+```
+
+And update your `package.json`:
+```json
+{
+  "name": "eventhub-shaker",
+  "version": "1.0.0",
+  "description": "EventHub Shaker Application",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
 ```
 
 ### EventHub Connection Issues
@@ -455,11 +427,12 @@ az eventhubs namespace show \
 - [ ] Create App Service plan
 - [ ] Create web app with Node.js runtime
 - [ ] Configure deployment from GitHub (Actions or manual Git)
+- [ ] Optionally add server.js for static file serving
 - [ ] Create EventHub namespace
 - [ ] Create event hub
-- [ ] Generate SAS token with Send permissions
-- [ ] Configure environment variables (SAS_KEY, EVENTSTREAM_CONNECTION) in App Service
-- [ ] Test the web app with EventHub credentials
+- [ ] Generate SAS policy with Send permissions
+- [ ] Get EventHub URL and SAS token for user configuration
+- [ ] Test the web app and configure EventHub credentials through the UI
 - [ ] Set up Power BI connection (optional)
 - [ ] Configure real-time dashboard (optional)
 - [ ] Set up monitoring and alerts (optional)

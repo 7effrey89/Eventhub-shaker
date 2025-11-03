@@ -47,7 +47,6 @@ Azure App Service provides:
 - Production-ready hosting with HTTPS
 - Custom domain support with SSL
 - Integrated deployment from GitHub
-- Environment variable configuration for secure credential storage
 - Scaling and performance monitoring
 - Integration with Azure services
 
@@ -55,7 +54,6 @@ The deployment guide includes:
 - Complete Azure CLI setup instructions
 - Steps for creating resource group, plan, and web app
 - GitHub deployment configuration
-- Environment variable setup (SAS_KEY, EVENTSTREAM_CONNECTION)
 - EventHub infrastructure configuration
 - Power BI connection setup
 - Security best practices
