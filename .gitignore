@@ -29,3 +29,5 @@ temp/
 .env
 .env.local
 /.vs
+/obj
+/bin/Debug/net8.0
