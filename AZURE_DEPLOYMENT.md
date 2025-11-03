@@ -1,20 +1,19 @@
 # Azure Deployment Guide
 
-This guide walks you through deploying the EventHub Shaker application to Azure, including both the web app and EventHub infrastructure.
+This guide walks you through deploying the EventHub Shaker application to Azure App Service, including both the web app and EventHub infrastructure.
 
 ## 📋 Prerequisites
 
 - Azure subscription ([Get a free account](https://azure.microsoft.com/free/))
 - Azure CLI installed ([Installation guide](https://docs.microsoft.com/cli/azure/install-azure-cli))
 - Git installed
+- A GitHub account with access to fork or use this repository
 
-## 🚀 Deployment Options
+## 🚀 Deploying to Azure App Service
 
-### Option 1: Azure Static Web Apps (Recommended)
+Azure App Service provides production-ready hosting with HTTPS, custom domains, scaling, and integrated authentication. This application is a web application with UI components that requires proper hosting with environment variable support.
 
-Azure Static Web Apps provides free hosting with HTTPS, perfect for this application.
-
-#### Step 1: Create the Static Web App
+### Step 1: Login and Set Subscription
 
 ```bash
 # Login to Azure
@@ -22,167 +21,152 @@ az login
 
 # Set your subscription (if you have multiple)
 az account set --subscription "Your-Subscription-Name"
-
-# Create a resource group
-az group create \
-  --name eventhub-shaker-rg \
-  --location swedencentral
-
-# Create the static web app
-az staticwebapp create \
-  --name eventhub-shaker \
-  --resource-group eventhub-shaker-rg \
-  --source https://github.com/7effrey89/Eventhub-shaker \
-  --location westeurope \
-  --branch main \
-  --app-location "/" \
-  --login-with-github
 ```
 
-#### Step 2: Get the Deployment URL
-
-```bash
-# Get the URL of your deployed app
-az staticwebapp show \
-  --name eventhub-shaker \
-  --resource-group eventhub-shaker-rg \
-  --query "defaultHostname" \
-  --output tsv
-```
-
-Your app will be available at: `https://[random-name].azurestaticapps.net`
-
-#### Step 3: Configure Custom Domain (Optional)
-
-```bash
-# Add a custom domain
-az staticwebapp hostname set \
-  --name eventhub-shaker \
-  --resource-group eventhub-shaker-rg \
-  --hostname www.yourdomain.com
-```
-
----
-
-### Option 2: Azure App Service
-
-For more control and customization options.
-
-#### Step 1: Create App Service Plan
+### Step 2: Create Resource Group
 
 ```bash
 # Create a resource group
 az group create \
   --name eventhub-shaker-rg \
   --location eastus
+```
 
-# Create an App Service plan (Free tier)
+### Step 3: Create App Service Plan
+
+```bash
+# Create an App Service plan (B1 tier recommended for production)
 az appservice plan create \
   --name eventhub-shaker-plan \
   --resource-group eventhub-shaker-rg \
-  --sku FREE \
+  --sku B1 \
   --is-linux
+
+# For development/testing, you can use Free tier (F1):
+# az appservice plan create \
+#   --name eventhub-shaker-plan \
+#   --resource-group eventhub-shaker-rg \
+#   --sku F1 \
+#   --is-linux
 ```
 
-#### Step 2: Create Web App
+### Step 4: Create Web App
 
 ```bash
-# Create the web app
+# Create the web app with Node.js runtime (for serving static content)
 az webapp create \
   --name eventhub-shaker-app \
   --resource-group eventhub-shaker-rg \
   --plan eventhub-shaker-plan \
   --runtime "NODE:18-lts"
+
+# Note: Replace 'eventhub-shaker-app' with a unique name as it must be globally unique
 ```
 
-#### Step 3: Deploy from GitHub
+### Step 5: Configure Deployment from GitHub
+
+#### Option A: Using GitHub Actions (Recommended)
 
 ```bash
-# Configure GitHub deployment
-az webapp deployment source config \
+# Configure GitHub Actions deployment
+az webapp deployment github-actions add \
   --name eventhub-shaker-app \
   --resource-group eventhub-shaker-rg \
-  --repo-url https://github.com/YOUR-USERNAME/Eventhub-shaker \
+  --repo "YOUR-USERNAME/Eventhub-shaker" \
   --branch main \
-  --manual-integration
+  --login-with-github
+
+# This will create a GitHub Actions workflow in your repository
 ```
 
-#### Step 4: Access Your App
-
-Your app will be available at: `https://eventhub-shaker-app.azurewebsites.net`
-
----
-
-### Option 3: Azure Blob Storage (Static Website)
-
-Most cost-effective option for static content.
-
-#### Step 1: Create Storage Account
+#### Option B: Using Manual Git Deployment
 
 ```bash
-# Create a resource group
-az group create \
-  --name eventhub-shaker-rg \
-  --location eastus
+# Get deployment credentials
+az webapp deployment source config-local-git \
+  --name eventhub-shaker-app \
+  --resource-group eventhub-shaker-rg
 
-# Create a storage account
-az storage account create \
-  --name eventhubshaker \
+# Get the Git URL (it will be displayed in the output)
+# Then push your code:
+# git remote add azure <git-url>
+# git push azure main
+```
+
+### Step 6: Configure Environment Variables
+
+The application can optionally use environment variables for default configuration. While the app allows users to configure these values through the UI, you can set defaults using App Settings.
+
+#### Using Azure Portal:
+
+1. Navigate to your App Service in Azure Portal
+2. Go to **Settings** → **Configuration** → **Application settings**
+3. Click **+ New application setting** and add:
+   - **Name**: `SAS_KEY`
+   - **Value**: Your EventHub SAS token (starts with `SharedAccessSignature sr=...`)
+4. Click **+ New application setting** again:
+   - **Name**: `EVENTSTREAM_CONNECTION`
+   - **Value**: Your EventHub URL (e.g., `https://[namespace].servicebus.windows.net/[eventhub-name]`)
+5. Click **Save** at the top
+
+#### Using Azure CLI:
+
+```bash
+# Set SAS_KEY environment variable
+az webapp config appsettings set \
+  --name eventhub-shaker-app \
   --resource-group eventhub-shaker-rg \
-  --location eastus \
-  --sku Standard_LRS \
-  --kind StorageV2
-```
+  --settings SAS_KEY="SharedAccessSignature sr=..."
 
-#### Step 2: Enable Static Website Hosting
-
-```bash
-# Enable static website hosting
-az storage blob service-properties update \
-  --account-name eventhubshaker \
-  --static-website \
-  --index-document index.html
-```
-
-#### Step 3: Upload Files
-
-```bash
-# Get the storage account key
-STORAGE_KEY=$(az storage account keys list \
-  --account-name eventhubshaker \
+# Set EVENTSTREAM_CONNECTION environment variable
+az webapp config appsettings set \
+  --name eventhub-shaker-app \
   --resource-group eventhub-shaker-rg \
-  --query "[0].value" \
-  --output tsv)
+  --settings EVENTSTREAM_CONNECTION="https://[namespace].servicebus.windows.net/[eventhub-name]"
 
-# Upload files to $web container
-az storage blob upload-batch \
-  --account-name eventhubshaker \
-  --account-key $STORAGE_KEY \
-  --destination '$web' \
-  --source ./ \
-  --pattern "*.html" \
-  --pattern "*.js" \
-  --pattern "*.css"
+# View all configured settings
+az webapp config appsettings list \
+  --name eventhub-shaker-app \
+  --resource-group eventhub-shaker-rg \
+  --output table
 ```
 
-#### Step 4: Get the Website URL
+**Note:** These environment variables are optional. Users can still enter their own EventHub credentials through the web UI when using the application.
+
+### Step 7: Access Your App
 
 ```bash
-# Get the static website URL
-az storage account show \
-  --name eventhubshaker \
+# Get the URL of your deployed app
+az webapp show \
+  --name eventhub-shaker-app \
   --resource-group eventhub-shaker-rg \
-  --query "primaryEndpoints.web" \
+  --query "defaultHostName" \
   --output tsv
 ```
 
-Your app will be available at: `https://eventhubshaker.z13.web.core.windows.net/`
+Your app will be available at: `https://eventhub-shaker-app.azurewebsites.net`
+
+### Step 8: Configure Custom Domain (Optional)
+
+```bash
+# Add a custom domain
+az webapp config hostname add \
+  --webapp-name eventhub-shaker-app \
+  --resource-group eventhub-shaker-rg \
+  --hostname www.yourdomain.com
+
+# Enable HTTPS
+az webapp update \
+  --name eventhub-shaker-app \
+  --resource-group eventhub-shaker-rg \
+  --https-only true
+```
 
 ---
 
 ## 🔧 Setup Azure EventHub
 
-After deploying the web app, you need to set up the EventHub infrastructure.
+After deploying the web app, you need to set up the EventHub infrastructure to receive telemetry data.
 
 ### Step 1: Create EventHub Namespace
 
@@ -222,33 +206,37 @@ az eventhubs eventhub authorization-rule create \
 ### Step 4: Get Connection Details
 
 ```bash
-# Get the connection string
+# Get the connection string and SAS key
 az eventhubs eventhub authorization-rule keys list \
   --name SendPolicy \
   --eventhub-name phone-shakes \
   --namespace-name shake-telemetry-ns \
   --resource-group eventhub-shaker-rg \
-  --query "primaryConnectionString" \
-  --output tsv
+  --output json
 ```
 
-The output will look like:
+The output will contain:
+```json
+{
+  "primaryConnectionString": "Endpoint=sb://shake-telemetry-ns.servicebus.windows.net/;SharedAccessKeyName=SendPolicy;SharedAccessKey=...;EntityPath=phone-shakes",
+  "primaryKey": "...",
+  "keyName": "SendPolicy"
+}
 ```
-Endpoint=sb://shake-telemetry-ns.servicebus.windows.net/;SharedAccessKeyName=SendPolicy;SharedAccessKey=...;EntityPath=phone-shakes
-```
 
-### Step 5: Extract URL and SAS Token
+### Step 5: Extract Configuration Values
 
-From the connection string, you need:
+From the connection details, extract:
 
-**EventHub URL:**
+**EventHub URL (EVENTSTREAM_CONNECTION):**
 ```
 https://shake-telemetry-ns.servicebus.windows.net/phone-shakes
 ```
 
-**SAS Token** (generate using the key):
+**SAS Key (SAS_KEY):**
+Get the full SAS token signature:
 ```bash
-# Or generate a SAS token directly (expires in 24 hours)
+# Get the primary key
 az eventhubs eventhub authorization-rule keys list \
   --name SendPolicy \
   --eventhub-name phone-shakes \
@@ -258,9 +246,34 @@ az eventhubs eventhub authorization-rule keys list \
   --output tsv
 ```
 
-Then create a SAS token using the format:
+The SAS token format should be:
 ```
 SharedAccessSignature sr=https%3A%2F%2Fshake-telemetry-ns.servicebus.windows.net%2Fphone-shakes&sig=<signature>&se=<expiry>&skn=SendPolicy
+```
+
+You can generate a complete SAS token using Azure Portal:
+1. Go to your EventHub → Shared access policies → SendPolicy
+2. Copy the **Primary key** value - this is what you'll use as the SAS_KEY
+
+### Step 6: Configure Web App with EventHub Settings
+
+Now that you have your EventHub details, configure them in your web app:
+
+#### Using Azure Portal:
+1. Go to your App Service → Configuration → Application settings
+2. Add `SAS_KEY` with your SAS token
+3. Add `EVENTSTREAM_CONNECTION` with your EventHub URL
+4. Save changes
+
+#### Using Azure CLI:
+```bash
+# Set both environment variables at once
+az webapp config appsettings set \
+  --name eventhub-shaker-app \
+  --resource-group eventhub-shaker-rg \
+  --settings \
+    EVENTSTREAM_CONNECTION="https://shake-telemetry-ns.servicebus.windows.net/phone-shakes" \
+    SAS_KEY="SharedAccessSignature sr=..."
 ```
 
 ---
@@ -337,16 +350,25 @@ echo $EXPIRY
 
 ## 💰 Cost Estimation
 
-**Static Web App (Free tier):**
+**Azure App Service (B1 Basic tier):**
+- App Service: ~$13/month
+- 100 GB bandwidth included
+- Custom domains and SSL: Free
+
+**Azure App Service (F1 Free tier):**
 - Hosting: Free
-- Bandwidth: 100 GB/month free
-- Custom domains: Free
+- 1 GB bandwidth/day
+- 60 CPU minutes/day
+- No custom domain SSL
+- Suitable for development/testing
 
 **EventHub Basic:**
 - ~$10/month (1 throughput unit)
 - 1M events included
 
-**Total estimated cost:** ~$10/month
+**Total estimated cost:**
+- Production (B1): ~$23/month
+- Development (F1): ~$10/month
 
 ---
 
@@ -368,13 +390,33 @@ az group delete \
 
 ### Web App Not Loading
 ```bash
-# Check deployment status
-az staticwebapp show \
-  --name eventhub-shaker \
+# Check web app status
+az webapp show \
+  --name eventhub-shaker-app \
+  --resource-group eventhub-shaker-rg \
+  --query "state"
+
+# View application logs
+az webapp log tail \
+  --name eventhub-shaker-app \
   --resource-group eventhub-shaker-rg
 
-# View logs
-az webapp log tail \
+# Check deployment status
+az webapp deployment list \
+  --name eventhub-shaker-app \
+  --resource-group eventhub-shaker-rg
+```
+
+### Environment Variables Not Working
+```bash
+# Verify environment variables are set
+az webapp config appsettings list \
+  --name eventhub-shaker-app \
+  --resource-group eventhub-shaker-rg \
+  --output table
+
+# Restart the web app after changing settings
+az webapp restart \
   --name eventhub-shaker-app \
   --resource-group eventhub-shaker-rg
 ```
@@ -398,23 +440,28 @@ az eventhubs namespace show \
 
 ## 📚 Additional Resources
 
-- [Azure Static Web Apps Documentation](https://docs.microsoft.com/azure/static-web-apps/)
+- [Azure App Service Documentation](https://docs.microsoft.com/azure/app-service/)
 - [Azure Event Hubs Documentation](https://docs.microsoft.com/azure/event-hubs/)
 - [Power BI Real-Time Streaming](https://docs.microsoft.com/power-bi/connect-data/service-real-time-streaming)
 - [Azure CLI Reference](https://docs.microsoft.com/cli/azure/)
+- [Deploy to Azure App Service](https://docs.microsoft.com/azure/app-service/quickstart-nodejs)
 
 ---
 
 ## ✅ Quick Deployment Checklist
 
+- [ ] Install Azure CLI and login
 - [ ] Create Azure resource group
-- [ ] Deploy web app (Static Web App, App Service, or Blob Storage)
+- [ ] Create App Service plan
+- [ ] Create web app with Node.js runtime
+- [ ] Configure deployment from GitHub (Actions or manual Git)
 - [ ] Create EventHub namespace
 - [ ] Create event hub
 - [ ] Generate SAS token with Send permissions
+- [ ] Configure environment variables (SAS_KEY, EVENTSTREAM_CONNECTION) in App Service
 - [ ] Test the web app with EventHub credentials
-- [ ] Set up Power BI connection
-- [ ] Configure real-time dashboard
+- [ ] Set up Power BI connection (optional)
+- [ ] Configure real-time dashboard (optional)
 - [ ] Set up monitoring and alerts (optional)
 - [ ] Configure custom domain (optional)
 
