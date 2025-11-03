@@ -17,8 +17,10 @@ A web-based demo application that captures phone shake telemetry and sends it to
 1. Open `index.html` in a mobile browser (or host it on any web server)
 2. Enter your name
 3. Enter your EventHub/EventStream connection details:
-   - **EventHub URL**: `https://[namespace].servicebus.windows.net/[eventhub-name]`
-   - **SAS Token**: Your SharedAccessSignature with Send permissions
+   - **EventHub URL**: Paste the EventHub-compatible endpoint from Azure EventHub or Microsoft Fabric EventStream
+     - Azure EventHub format: `https://[namespace].servicebus.windows.net/[eventhub-name]`
+     - EventStream format: `https://eventhouse-[xyz].servicebus.windows.net/es_[stream-name]`
+   - **SAS Token**: Paste the SAS Key from the "SAS Key Authentication" tab (starts with "SharedAccessSignature sr=...")
 4. Click "Apply Settings & Start"
 5. Grant motion permission when prompted (iOS)
 6. Start shaking your phone! 📱
@@ -69,9 +71,14 @@ Includes full setup for:
 
 ### Step 2: Configure Custom Endpoint
 1. In your EventStream, add a source → **Custom App**
-2. Copy the **Event Hub compatible endpoint**
-3. Generate a **SAS token** with Send permissions
-4. Use these in the web app configuration
+2. Go to the **Keys** section
+3. Click on the **SAS Key Authentication** tab
+4. Copy the **Event Hub compatible endpoint** URL
+   - Format: `https://eventhouse-[xyz].servicebus.windows.net/es_[stream-name]`
+   - Example: `https://eventhouse-abc123.servicebus.windows.net/es_phone-shake-stream`
+5. Copy the **SAS Key** value (starts with `SharedAccessSignature sr=...`)
+   - Example: `SharedAccessSignature sr=eventhouse-abc123.servicebus.windows.net&sig=...&se=1234567890&skn=KeyName`
+6. Use these values in the web app configuration form
 
 ### Step 3: Add Destinations
 - **KQL Database**: For querying and analytics

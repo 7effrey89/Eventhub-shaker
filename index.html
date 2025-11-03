@@ -25,7 +25,7 @@
                     <label for="eventhubUrl">EventHub / EventStream URL:</label>
                     <input type="text" id="eventhubUrl" name="eventhubUrl" 
                            placeholder="https://[namespace].servicebus.windows.net/[eventhub-name]" required>
-                    <small>Example: https://mynamespace.servicebus.windows.net/myeventhub</small>
+                    <small>Paste EventHub-compatible endpoint from Azure EventHub or Microsoft Fabric EventStream. Example: https://mynamespace.servicebus.windows.net/myeventhub</small>
                 </div>
 
                 <div class="form-group">
@@ -33,7 +33,7 @@
                     <textarea id="sasKey" name="sasKey" rows="3" 
                               placeholder="SharedAccessSignature sr=..." 
                               autocomplete="off" spellcheck="false" required></textarea>
-                    <small>Your SAS token starting with "SharedAccessSignature..."</small>
+                    <small>Paste SAS Key from Azure EventHub or Microsoft Fabric EventStream (SAS Key Authentication tab). Example: SharedAccessSignature sr=mynamespace.servicebus.windows.net&amp;sig=...&amp;se=1234567890&amp;skn=SendPolicy</small>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Apply Settings & Start</button>
@@ -139,8 +139,10 @@
                         <ul>
                             <li>Add a source → "Custom App"</li>
                             <li>This provides an EventHub-compatible endpoint</li>
-                            <li>Copy the connection string or endpoint URL</li>
-                            <li>Generate SAS token with Send permissions</li>
+                            <li>Go to the "Keys" section and select "SAS Key Authentication" tab</li>
+                            <li>Copy the <strong>Event Hub compatible endpoint</strong> URL (e.g., https://eventhouse-xyz.servicebus.windows.net/es_...)</li>
+                            <li>Copy the <strong>SAS Key</strong> value starting with "SharedAccessSignature sr=..."</li>
+                            <li>Paste both values into the form above</li>
                         </ul>
                     </li>
                     <li>
