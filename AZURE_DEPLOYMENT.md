@@ -26,14 +26,14 @@ az account set --subscription "Your-Subscription-Name"
 # Create a resource group
 az group create \
   --name eventhub-shaker-rg \
-  --location eastus
+  --location swedencentral
 
 # Create the static web app
 az staticwebapp create \
   --name eventhub-shaker \
   --resource-group eventhub-shaker-rg \
   --source https://github.com/YOUR-USERNAME/Eventhub-shaker \
-  --location eastus2 \
+  --location westeurope \
   --branch main \
   --app-location "/" \
   --login-with-github
