@@ -38,28 +38,26 @@ npx http-server
 # Then open: http://localhost:8000
 ```
 
-#### Option 2: GitHub Pages
-1. Push to GitHub
-2. Go to Settings → Pages
-3. Select branch and save
-4. Access at: `https://[username].github.io/Eventhub-shaker/`
-
-#### Option 3: Deploy to Azure
-For production deployment with HTTPS, scalability, and integration with Azure services:
+#### Option 2: Deploy to Azure App Service
+For production deployment with HTTPS, scalability, custom domains, and integration with Azure services:
 
 📘 **See [AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md) for complete deployment guide**
 
-Quick deploy options:
-- **Azure Static Web Apps** (Recommended - Free tier available)
-- **Azure App Service** (More control and features)
-- **Azure Blob Storage** (Most cost-effective)
+Azure App Service provides:
+- Production-ready hosting with HTTPS
+- Custom domain support with SSL
+- Integrated deployment from GitHub
+- Scaling and performance monitoring
+- Integration with Azure services
 
-Includes full setup for:
-- Web app deployment with Azure CLI
+The deployment guide includes:
+- Complete Azure CLI setup instructions
+- Steps for creating resource group, plan, and web app
+- GitHub deployment configuration
 - EventHub infrastructure configuration
 - Power BI connection setup
 - Security best practices
-- Cost estimation (~$10/month)
+- Cost estimation (~$23/month for production, ~$10/month for dev)
 
 ## 📊 Setup Microsoft Fabric EventStream
 
