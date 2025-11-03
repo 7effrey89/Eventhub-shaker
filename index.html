@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EventHub Shaker - Phone Shake Telemetry</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📱 EventHub Shaker</h1>
+            <p class="subtitle">Shake your phone to send telemetry to Azure EventHub / Microsoft Fabric EventStream</p>
+        </header>
+
+        <div class="card" id="setupCard">
+            <h2>Setup Configuration</h2>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="userName">Your Name:</label>
+                    <input type="text" id="userName" name="userName" placeholder="Enter your name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventhubUrl">EventHub / EventStream URL:</label>
+                    <input type="text" id="eventhubUrl" name="eventhubUrl" 
+                           placeholder="https://[namespace].servicebus.windows.net/[eventhub-name]" required>
+                    <small>Example: https://mynamespace.servicebus.windows.net/myeventhub</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="sasKey">SAS Token / Key:</label>
+                    <textarea id="sasKey" name="sasKey" rows="3" 
+                              placeholder="SharedAccessSignature sr=..." 
+                              autocomplete="off" spellcheck="false" required></textarea>
+                    <small>Your SAS token starting with "SharedAccessSignature..."</small>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Apply Settings & Start</button>
+            </form>
+        </div>
+
+        <div class="card" id="monitorCard" style="display: none;">
+            <h2>Shake Monitor</h2>
+            <div class="status-section">
+                <p><strong>Name:</strong> <span id="displayName"></span></p>
+                <p><strong>Status:</strong> <span id="status" class="status-active">Active</span></p>
+                <p><strong>Shake Count:</strong> <span id="shakeCount">0</span></p>
+                <p><strong>Total Events Sent:</strong> <span id="eventCount">0</span></p>
+            </div>
+
+            <div class="metrics-section">
+                <h3>Current Acceleration</h3>
+                <div class="metric-grid">
+                    <div class="metric">
+                        <label>X-Axis:</label>
+                        <span id="accelX">0.00</span> m/s²
+                    </div>
+                    <div class="metric">
+                        <label>Y-Axis:</label>
+                        <span id="accelY">0.00</span> m/s²
+                    </div>
+                    <div class="metric">
+                        <label>Z-Axis:</label>
+                        <span id="accelZ">0.00</span> m/s²
+                    </div>
+                    <div class="metric">
+                        <label>Magnitude:</label>
+                        <span id="accelMag">0.00</span> m/s²
+                    </div>
+                </div>
+            </div>
+
+            <div class="log-section">
+                <h3>Event Log</h3>
+                <div id="eventLog" class="event-log"></div>
+            </div>
+
+            <button id="stopBtn" class="btn btn-danger">Stop & Change Settings</button>
+        </div>
+
+        <div class="card info-card">
+            <h2>ℹ️ How to Setup in Microsoft Fabric</h2>
+            <div class="setup-instructions">
+                <h3>Option 1: Using Azure EventHub</h3>
+                <ol>
+                    <li>
+                        <strong>Create an EventHub Namespace:</strong>
+                        <ul>
+                            <li>Go to Azure Portal → Create Resource → Event Hubs</li>
+                            <li>Create a new namespace (e.g., "shake-telemetry-ns")</li>
+                            <li>Choose pricing tier (Basic/Standard)</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Create an EventHub:</strong>
+                        <ul>
+                            <li>Inside your namespace, create a new EventHub (e.g., "phone-shakes")</li>
+                            <li>Configure partition count (2-4 for testing)</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Generate SAS Token:</strong>
+                        <ul>
+                            <li>Go to EventHub → Shared access policies</li>
+                            <li>Create new policy with "Send" permissions</li>
+                            <li>Copy the "Primary Connection String" or generate a SAS token</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Connect to Power BI:</strong>
+                        <ul>
+                            <li>In Power BI, use "Get Data" → Azure → Azure Event Hubs</li>
+                            <li>Enter your EventHub connection details</li>
+                            <li>Create real-time dashboard with acceleration data</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Option 2: Using Microsoft Fabric EventStream</h3>
+                <ol>
+                    <li>
+                        <strong>Access Microsoft Fabric:</strong>
+                        <ul>
+                            <li>Go to <a href="https://app.fabric.microsoft.com" target="_blank">Microsoft Fabric Portal</a></li>
+                            <li>Navigate to Real-Time Intelligence workload</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Create EventStream:</strong>
+                        <ul>
+                            <li>Click "New" → "Eventstream"</li>
+                            <li>Name it (e.g., "Phone-Shake-Stream")</li>
+                            <li>Choose workspace</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Configure Custom Endpoint:</strong>
+                        <ul>
+                            <li>Add a source → "Custom App"</li>
+                            <li>This provides an EventHub-compatible endpoint</li>
+                            <li>Copy the connection string or endpoint URL</li>
+                            <li>Generate SAS token with Send permissions</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Add Destinations:</strong>
+                        <ul>
+                            <li>KQL Database - For storing and querying shake data</li>
+                            <li>Lakehouse - For long-term storage</li>
+                            <li>Reflex - For real-time alerts when shake intensity is high</li>
+                        </ul>
+                    </li>
+                    <li>
+                        <strong>Visualize in Power BI:</strong>
+                        <ul>
+                            <li>Create a KQL queryset to query shake data</li>
+                            <li>Build real-time Power BI report showing:</li>
+                            <li>- Shake intensity over time (line chart)</li>
+                            <li>- Shake count by user (bar chart)</li>
+                            <li>- Current acceleration magnitude (gauge)</li>
+                        </ul>
+                    </li>
+                </ol>
+
+                <h3>Data Format Sent to EventHub</h3>
+                <pre><code>{
+  "timestamp": "2024-11-02T23:45:00.000Z",
+  "userName": "John Doe",
+  "eventType": "shake",
+  "acceleration": {
+    "x": 2.45,
+    "y": -3.21,
+    "z": 9.81,
+    "magnitude": 10.75
+  },
+  "deltaAcceleration": {
+    "x": 1.23,
+    "y": -2.15,
+    "z": 0.45,
+    "magnitude": 2.56
+  },
+  "shakeIntensity": "high"
+}</code></pre>
+
+                <h3>Recommended Power BI Visuals</h3>
+                <ul>
+                    <li><strong>Line Chart:</strong> Acceleration magnitude over time</li>
+                    <li><strong>Scatter Plot:</strong> X vs Y vs Z acceleration (3D if possible)</li>
+                    <li><strong>Card Visual:</strong> Total shake count, average intensity</li>
+                    <li><strong>Table:</strong> Recent events with timestamp and user</li>
+                    <li><strong>Gauge:</strong> Current shake intensity (0-20 m/s²)</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
