@@ -42,11 +42,22 @@ npx http-server
 3. Select branch and save
 4. Access at: `https://[username].github.io/Eventhub-shaker/`
 
-#### Option 3: Azure Static Web Apps
-```bash
-# Deploy to Azure Static Web Apps
-az staticwebapp create --name eventhub-shaker --resource-group myResourceGroup
-```
+#### Option 3: Deploy to Azure
+For production deployment with HTTPS, scalability, and integration with Azure services:
+
+📘 **See [AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md) for complete deployment guide**
+
+Quick deploy options:
+- **Azure Static Web Apps** (Recommended - Free tier available)
+- **Azure App Service** (More control and features)
+- **Azure Blob Storage** (Most cost-effective)
+
+Includes full setup for:
+- Web app deployment with Azure CLI
+- EventHub infrastructure configuration
+- Power BI connection setup
+- Security best practices
+- Cost estimation (~$10/month)
 
 ## 📊 Setup Microsoft Fabric EventStream
 
