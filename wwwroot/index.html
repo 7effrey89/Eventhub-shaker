@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <title>EventHub Shaker - Phone Shake Telemetry</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📱 EventHub Shaker</h1>
+            <p class="subtitle">Shake your phone to send real-time telemetry</p>
+        </header>
+
+        <div class="card" id="setupCard">
+            <h2>Start</h2>
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="userName">Your Name</label>
+                    <input type="text" id="userName" name="userName" placeholder="Enter your name" required autocomplete="name" />
+                </div>
+                <button type="submit" class="btn btn-primary">Begin Monitoring</button>
+            </form>
+        </div>
+
+        <div class="card" id="monitorCard" style="display:none;">
+            <h2>Live Shake Monitor</h2>
+            <div class="status-section">
+                <p><strong>Name:</strong> <span id="displayName"></span></p>
+                <p><strong>Shake Count:</strong> <span id="shakeCount">0</span></p>
+                <p><strong>Events Sent:</strong> <span id="eventCount">0</span></p>
+            </div>
+            <div class="metrics-section">
+                <h3>Acceleration (m/s²)</h3>
+                <div class="metric-grid">
+                    <div class="metric"><label>X</label><span id="accelX">0.00</span></div>
+                    <div class="metric"><label>Y</label><span id="accelY">0.00</span></div>
+                    <div class="metric"><label>Z</label><span id="accelZ">0.00</span></div>
+                    <div class="metric"><label>Magnitude</label><span id="accelMag">0.00</span></div>
+                </div>
+            </div>
+            <div class="log-section">
+                <h3>Event Log</h3>
+                <div id="eventLog" class="event-log"></div>
+            </div>
+            <div class="action-buttons">
+                <button id="randomShakeBtn" class="btn btn-secondary" type="button">Send Random Shake</button>
+                <button id="stopBtn" class="btn btn-danger" type="button">Stop</button>
+            </div>
+            <small>No motion sensor? Use random shake to simulate.</small>
+        </div>
+
+        <footer style="text-align:center; font-size:.65rem; color:#64748b; margin-top:1rem;">
+            <p>Demo app • Secure keys should not be hard-coded in production.</p>
+        </footer>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>

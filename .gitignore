@@ -25,9 +25,13 @@ tmp/
 temp/
 *.tmp
 
+/publish
+
 # Environment variables
 .env
 .env.local
 /.vs
 /obj
 /bin/Debug/net8.0
+/bin
+

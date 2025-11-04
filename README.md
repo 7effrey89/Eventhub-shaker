@@ -1,198 +1,123 @@
-# EventHub Shaker 📱
+# EventHub Shaker (C# Minimal API)
 
-A web-based demo application that captures phone shake telemetry and sends it to Azure EventHub or Microsoft Fabric EventStream in real-time. Perfect for demonstrating real-time data streaming and Power BI visualizations!
+Collect phone shake telemetry in a mobile browser and stream events to Azure Event Hub (or Eventstream with Event Hub–compatible connection string) using the .NET 8 `EventHubProducerClient` SDK.
 
-## 🌟 Features
+## Architecture
+- Frontend: `wwwroot` (JavaScript) captures real accelerometer data or sends simulated shakes.
+- Backend: Minimal API (`Program.cs`) batches single JSON events to Event Hub.
+- Config: Environment variables first; if missing, hard-coded fallback in `Program.cs` (demo only).
 
-- **Simple Web Interface**: No app installation required - just open in a mobile browser
-- **Real-time Telemetry**: Captures accelerometer data when you shake your phone
-- **EventHub Integration**: Sends structured data to Azure EventHub or Microsoft Fabric EventStream
-- **Power BI Ready**: Data format optimized for real-time dashboards
-- **Visual Feedback**: See your shake count and acceleration metrics in real-time
+## Connection details from Microsoft Fabric Eventstream
+1. Create an Eventstream in Fabric.
+2. Choose Custom endpoint with Event Hub compatible API.
+3. For the Source 
+3. For the Destination of the eventstream, choose to create a new table in an already created Eventhouse
+4. Publish
+5. Once published get the connection details
+6. Click on the source of the eventstream
+7. In the bottom section of the source, choose the protocol: Event Hub
+8. Sas Key Authentication: Note down the 'Event Hub Name' and the 'Connection string-primary key' for later usag
 
-## 🚀 Quick Start
+## Connection String 
+At startup the app checks (first non-empty wins):
+1. `EVENTHUB__CONNECTIONSTRING`
+If the chosen connection string does NOT contain `EntityPath=`, it then looks for hub name via:
+1. `EVENTHUB__NAME`
+If still missing, it uses the hard-coded fallback values. When `EntityPath=` is embedded, the name variable is ignored.
 
-### For Users
-
-1. Open `index.html` in a mobile browser (or host it on any web server)
-2. Enter your name
-3. Enter your EventHub/EventStream connection details:
-   - **EventHub URL**: Paste the EventHub-compatible endpoint from Azure EventHub or Microsoft Fabric EventStream
-     - Azure EventHub format: `https://[namespace].servicebus.windows.net/[eventhub-name]`
-     - EventStream format: `https://eventhouse-[xyz].servicebus.windows.net/es_[stream-name]`
-   - **SAS Token**: Paste the SAS Key from the "SAS Key Authentication" tab (starts with "SharedAccessSignature sr=...")
-4. Click "Apply Settings & Start"
-5. Grant motion permission when prompted (iOS)
-6. Start shaking your phone! 📱
-
-### Hosting the Application
-
-#### Option 1: Local Testing
-```bash
-# Using Python
-python -m http.server 8000
-
-# Using Node.js
-npx http-server
-
-# Then open: http://localhost:8000
-```
-
-#### Option 2: Deploy to Azure App Service
-For production deployment with HTTPS, scalability, custom domains, and integration with Azure services:
-
-📘 **See [AZURE_DEPLOYMENT.md](AZURE_DEPLOYMENT.md) for complete deployment guide**
-
-Azure App Service provides:
-- Production-ready hosting with HTTPS
-- Custom domain support with SSL
-- Integrated deployment from GitHub
-- Scaling and performance monitoring
-- Integration with Azure services
-
-The deployment guide includes:
-- Complete Azure CLI setup instructions
-- Steps for creating resource group, plan, and web app
-- GitHub deployment configuration
-- EventHub infrastructure configuration
-- Power BI connection setup
-- Security best practices
-- Cost estimation (~$23/month for production, ~$10/month for dev)
-
-## 📊 Setup Microsoft Fabric EventStream
-
-### Step 1: Create EventStream
-1. Go to [Microsoft Fabric Portal](https://app.fabric.microsoft.com)
-2. Navigate to **Real-Time Intelligence** workload
-3. Click **New** → **Eventstream**
-4. Name it (e.g., "Phone-Shake-Stream")
-
-### Step 2: Configure Custom Endpoint
-1. In your EventStream, add a source → **Custom App**
-2. Go to the **Keys** section
-3. Click on the **SAS Key Authentication** tab
-4. Copy the **Event Hub compatible endpoint** URL
-   - Format: `https://eventhouse-[xyz].servicebus.windows.net/es_[stream-name]`
-   - Example: `https://eventhouse-abc123.servicebus.windows.net/es_phone-shake-stream`
-5. Copy the **SAS Key** value (starts with `SharedAccessSignature sr=...`)
-   - Example: `SharedAccessSignature sr=eventhouse-abc123.servicebus.windows.net&sig=...&se=1234567890&skn=KeyName`
-6. Use these values in the web app configuration form
-
-### Step 3: Add Destinations
-- **KQL Database**: For querying and analytics
-- **Lakehouse**: For long-term storage
-- **Reflex**: For real-time alerts
-
-### Step 4: Visualize in Power BI
-Create real-time reports with:
-- **Line Chart**: Acceleration magnitude over time
-- **Bar Chart**: Shake count by user
-- **Gauge**: Current shake intensity
-- **Map**: Geographic distribution (if location added)
-
-## 📦 Data Format
-
-The application sends JSON events to EventHub:
-
+## Event Payload Schema (sent to Event Hub)
 ```json
 {
   "timestamp": "2024-11-02T23:45:00.000Z",
-  "userName": "John Doe",
+  "userName": "Jane",
   "eventType": "shake",
-  "acceleration": {
-    "x": 2.45,
-    "y": -3.21,
-    "z": 9.81,
-    "magnitude": 10.75
-  },
-  "deltaAcceleration": {
-    "x": 1.23,
-    "y": -2.15,
-    "z": 0.45,
-    "magnitude": 2.56
-  },
-  "shakeIntensity": "high"
+  "acceleration": { "x": 2.45, "y": -3.21, "z": 9.81, "magnitude": 10.75 },
+  "deltaAcceleration": { "x": 1.23, "y": -2.15, "z": 0.45, "magnitude": 2.56 },
+  "shakeIntensity": "high",
+  "serverTimestamp": "2024-11-02T23:45:00.120Z",
+  "accelerationValue": 10.75,
+  "deltaAccelerationValue": 2.56
 }
 ```
+`accelerationValue` and `deltaAccelerationValue` duplicate the magnitude fields for simpler querying.
 
-### Fields Explanation
-- **timestamp**: ISO 8601 format timestamp
-- **userName**: User identifier from form
-- **eventType**: Always "shake" for shake events
-- **acceleration**: Current acceleration on X, Y, Z axes (m/s²)
-- **deltaAcceleration**: Change in acceleration (useful for detecting shake intensity)
-- **shakeIntensity**: "low", "medium", or "high" based on delta magnitude
-
-## 🛠️ Azure EventHub Setup
-
-### Create EventHub
+## Local Run
+1. Install .NET 8 SDK.
+2. Set env vars (preferred):
 ```bash
-# Create namespace
-az eventhubs namespace create \
-  --name shake-telemetry-ns \
-  --resource-group myResourceGroup \
-  --location eastus
-
-# Create event hub
-az eventhubs eventhub create \
-  --name phone-shakes \
-  --namespace-name shake-telemetry-ns \
-  --resource-group myResourceGroup
+set EVENTHUB__CONNECTIONSTRING=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=SendPolicy;SharedAccessKey=<KEY>;EntityPath=<EventHubNameInEventStreamSourceSasKeyAuthentication>
+# OR without EntityPath (which will be the default from connection string primary key):
+set EVENTHUB__CONNECTIONSTRING=Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=SendPolicy;SharedAccessKey=<KEY>
+set EVENTHUB__NAME=<EventHubNameInEventStreamSourceSasKeyAuthentication>
 ```
-
-### Generate SAS Token
+3. Run:
 ```bash
-# Create authorization rule
-az eventhubs eventhub authorization-rule create \
-  --name SendPolicy \
-  --eventhub-name phone-shakes \
-  --namespace-name shake-telemetry-ns \
-  --resource-group myResourceGroup \
-  --rights Send
-
-# Get connection string
-az eventhubs eventhub authorization-rule keys list \
-  --name SendPolicy \
-  --eventhub-name phone-shakes \
-  --namespace-name shake-telemetry-ns \
-  --resource-group myResourceGroup
+dotnet run
 ```
+4. Open http://localhost:5000 on a phone → enter name → Start.
 
-## 📱 Browser Compatibility
+User-secrets alternative (Development only):
+```bash
+dotnet user-secrets init
+dotnet user-secrets set "EventHub:ConnectionString" "Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=SendPolicy;SharedAccessKey=<KEY>;EntityPath=<EventHubNameInEventStreamSourceSasKeyAuthentication>"
+```
+# Deploy
 
-- ✅ iOS Safari (with permission prompt)
-- ✅ Android Chrome
-- ✅ Android Firefox
-- ⚠️ Desktop browsers (limited motion support)
+## Deploy (Option 1: Zip Deploy from VS Code to Azure App Service Linux)
+Provision resources:
+```bash
+# Login to Azure
+az login
 
-**Note**: DeviceMotion API requires HTTPS on mobile devices (except localhost).
+az group create -n shaker-rg -l swedencentral
+az appservice plan create -n shaker-plan -g shaker-rg --sku B1 --is-linux
+az webapp create -n shaker-web -g shaker-rg -p shaker-plan --runtime "DOTNETCORE:8.0"
+```
+Configure application settings:
+```bash
+az webapp config appsettings set -n shaker-web -g shaker-rg --settings \
+  EVENTHUB__CONNECTIONSTRING="Endpoint=sb://<namespace>.servicebus.windows.net/;SharedAccessKeyName=SendPolicy;SharedAccessKey=<KEY>;EntityPath=<EventHubNameInEventStreamSourceSasKeyAuthentication>"
+# If no EntityPath in connection string:
+az webapp config appsettings set -n shaker-web -g shaker-rg --settings EVENTHUB__NAME=<EventHubNameInEventStreamSourceSasKeyAuthentication>
+```
+Publish and package:
+```bash
+dotnet publish EventhubShaker.csproj -c Release -o publish
+cd publish
+# Linux/macOS:
+zip -r app.zip .
+# Windows PowerShell:
+Compress-Archive -Path * -DestinationPath app.zip
+```
+Deploy zip:
+```bash
+az webapp deployment source config-zip -n shaker-web -g shaker-rg --src app.zip
+```
+Test:
+```bash
+# Linux/macOS/Git Bash:
+curl https://shaker-web.azurewebsites.net/api/config-status
+curl -X POST https://shaker-web.azurewebsites.net/api/telemetry \
+  -H "Content-Type: application/json" \
+  -d '{"timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","userName":"Test","eventType":"shake","acceleration":{"x":1,"y":2,"z":3,"magnitude":3.74},"deltaAcceleration":{"x":0.5,"y":0.2,"z":0.1,"magnitude":0.55},"shakeIntensity":"low"}'
 
-## 🔒 Security Notes
+# Windows PowerShell:
+curl https://shaker-web.azurewebsites.net/api/config-status
+$timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ" -AsUTC)
+curl -X POST https://shaker-web.azurewebsites.net/api/telemetry -H "Content-Type: application/json" -d "{`"timestamp`":`"$timestamp`",`"userName`":`"Test`",`"eventType`":`"shake`",`"acceleration`":{`"x`":1,`"y`":2,`"z`":3,`"magnitude`":3.74},`"deltaAcceleration`":{`"x`":0.5,`"y`":0.2,`"z`":0.1,`"magnitude`":0.55},`"shakeIntensity`":`"low`"}"
+```
+## Features: Simulated Events
+Button produces `eventType = simulated-shake`.
 
-- SAS tokens are stored in browser memory only (not persisted)
-- Use SAS tokens with minimal permissions (Send only)
-- Set token expiration to limit exposure
-- Consider using Azure Key Vault for production
+# Other
 
-## 🎯 Use Cases
+## Power BI / KQL Ideas
+- Line chart: accelerationValue over time.
+- Bar chart: shakes per userName.
+- Gauge: deltaAccelerationValue latest.
+- Table: recent events (intensity, timestamp).
 
-1. **Conference Demos**: Engage audience by having them shake phones
-2. **IoT Training**: Demonstrate real-time data streaming concepts
-3. **Power BI Workshops**: Show live dashboard updates
-4. **Team Building**: Gamify data collection with shake competitions
-
-## 🤝 Contributing
-
-Contributions welcome! Feel free to:
-- Add new telemetry types (orientation, rotation)
-- Improve shake detection algorithm
-- Add more visualizations
-- Enhance mobile UX
-
-## 📝 License
-
-MIT License - feel free to use for demos, workshops, and learning!
-
-## 🙏 Acknowledgments
-
-Built to demonstrate Azure EventHub and Microsoft Fabric EventStream capabilities with real-time mobile telemetry.
+## Interesting facts:
+- Why is the magnitude around ~9.79 m/s² When the Device is Still?
+- This is Earth's gravitational acceleration!
+- Gravity Constant: Earth's gravitational acceleration is approximately 9.81 m/s² (or 9.8 m/s² as commonly rounded)
