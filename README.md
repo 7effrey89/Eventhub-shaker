@@ -1,6 +1,6 @@
 # EventHub Shaker (C# Minimal API)
 
-Collect phone shake telemetry in a mobile browser and stream events to Azure Event Hub (or Eventstream with Event Hub–compatible connection string) using the .NET 8 `EventHubProducerClient` SDK.
+Collect phone shake telemetry in a mobile browser and stream events to Azure Event Hub (or Fabric Eventstream with Event Hub–compatible connection string) using the .NET 8 `EventHubProducerClient` SDK.
 <img width="662" height="731" alt="image" src="https://github.com/user-attachments/assets/8e6e6e4b-72b6-4029-b0e8-dae8b11a75b0" />
 
 ## Architecture
