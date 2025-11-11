@@ -12,7 +12,7 @@ Collect phone shake telemetry in a mobile browser and stream events to Azure Eve
 1. Create an Eventstream in Fabric.
 2. Choose Custom endpoint with Event Hub compatible API.
 3. For the Source 
-3. For the Destination of the eventstream, choose to create a new table in an already created Eventhouse
+3. For the Destination of the eventstream, choose to create a new table (e.g. shakertable) in an already created Eventhouse
 4. Publish
 5. Once published get the connection details
 6. Click on the source of the eventstream
@@ -107,6 +107,9 @@ curl https://shaker-web.azurewebsites.net/api/config-status
 $timestamp = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ" -AsUTC)
 curl -X POST https://shaker-web.azurewebsites.net/api/telemetry -H "Content-Type: application/json" -d "{`"timestamp`":`"$timestamp`",`"userName`":`"Test`",`"eventType`":`"shake`",`"acceleration`":{`"x`":1,`"y`":2,`"z`":3,`"magnitude`":3.74},`"deltaAcceleration`":{`"x`":0.5,`"y`":0.2,`"z`":0.1,`"magnitude`":0.55},`"shakeIntensity`":`"low`"}"
 ```
+## Change Eventhub hub endpoint in app
+You can always change the eventhub/eventstream the app is connected to. This can be done by going to the web app in the azure portal. then find "Settings" --> Environment Settings --> replace the value for EVENTHUB__CONNECTIONSTRING with another connectionstring
+
 ## Features: Simulated Events
 Button produces `eventType = simulated-shake`.
 
@@ -117,6 +120,27 @@ Button produces `eventType = simulated-shake`.
 - Bar chart: shakes per userName.
 - Gauge: deltaAccelerationValue latest.
 - Table: recent events (intensity, timestamp).
+
+## Evenstream
+## KQL demo
+<img width="1319" height="561" alt="image" src="https://github.com/user-attachments/assets/4f77c0d0-440d-40af-95a3-b87772bacb09" />
+Insert below kql script into a kql queryset and execute the code (adjust the tablename as appropriate - in this example it's called shakertable). this will show a graph of all the data in the eventhouse
+
+```KQL
+shakertable
+| extend timestamp_dt = todatetime(timestamp)
+| project timestamp_dt, accelerationValue, userName
+| render timechart 
+    with (
+        title="Acceleration Value Over Time by User",
+        xtitle="Timestamp",
+        ytitle="Acceleration Value",
+        ysplit=none,
+        xcolumn=timestamp_dt,
+        ycolumns=accelerationValue,
+        series=userName
+    )
+```
 
 ## Interesting facts:
 - Why is the magnitude around ~9.79 m/s² When the Device is Still?
