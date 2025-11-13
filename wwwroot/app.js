@@ -44,10 +44,11 @@ function clearCustomConnection() {
 // Initialize custom connection on load
 loadCustomConnection();
 
-// Check URL parameters for connection string
+// Check URL parameters for connection string and userName
 function checkUrlParameters() {
     const params = new URLSearchParams(window.location.search);
     const connString = params.get('conn');
+    const userName = params.get('userName');
     
     if (connString) {
         try {
@@ -57,25 +58,42 @@ function checkUrlParameters() {
             // Auto-apply the connection string
             saveCustomConnection(decoded);
             
-            // Show notification
-            log('info', 'Connection string loaded from URL and applied');
-            
-            // Clean up URL without reloading
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
+            // Log message after DOM is ready
+            console.log('Connection string loaded from URL and applied');
         } catch (err) {
             console.error('Failed to decode connection string from URL:', err);
-            log('error', 'Invalid connection string in URL');
         }
     }
+    
+    if (userName) {
+        // Pre-fill the userName field
+        const userNameInput = document.getElementById('userName');
+        if (userNameInput) {
+            userNameInput.value = decodeURIComponent(userName);
+        }
+    }
+    
+    // Return whether we had URL params (don't clean URL yet)
+    return (connString || userName) ? true : false;
 }
 
 // Run on page load
-checkUrlParameters();
+const hadUrlParams = checkUrlParameters();
+
+// Show log message after DOM elements are available
+if (hadUrlParams) {
+    // Wait for DOM to be fully ready, then show message
+    setTimeout(() => {
+        if (typeof log === 'function') {
+            log('info', 'Configuration loaded from URL');
+        }
+    }, 100);
+}
 
 const setupCard = document.getElementById('setupCard');
 const monitorCard = document.getElementById('monitorCard');
 const configForm = document.getElementById('configForm');
+const beginMonitoringBtn = document.getElementById('beginMonitoringBtn');
 const stopBtn = document.getElementById('stopBtn');
 const randomShakeBtn = document.getElementById('randomShakeBtn');
 const displayName = document.getElementById('displayName');
@@ -102,12 +120,32 @@ const copyUrlBtn = document.getElementById('copyUrlBtn');
 
 let qrCodeInstance = null;
 
-configForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    state.userName = document.getElementById('userName').value.trim();
-    if (!state.userName) return;
+console.log('beginMonitoringBtn:', beginMonitoringBtn);
+
+beginMonitoringBtn.addEventListener('click', async () => {
+    console.log('Button clicked!');
+    const userNameInput = document.getElementById('userName');
+    state.userName = userNameInput.value.trim();
+    console.log('userName:', state.userName);
+    if (!state.userName) {
+        userNameInput.focus();
+        return;
+    }
+    
+    // Clean up URL if we had parameters
+    if (hadUrlParams) {
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+    }
+    
     await requestMotionPermission();
     start();
+});
+
+// Allow Enter key to submit
+configForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    beginMonitoringBtn.click();
 });
 
 stopBtn.addEventListener('click', () => stop());
