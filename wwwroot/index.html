@@ -6,12 +6,14 @@
     <meta name="theme-color" content="#0f172a" />
     <title>EventHub Shaker - Phone Shake Telemetry</title>
     <link rel="stylesheet" href="styles.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>📱 EventHub Shaker</h1>
             <p class="subtitle">Shake your phone to send real-time telemetry</p>
+            <button id="settingsBtn" class="settings-btn" type="button" title="Settings">⚙️</button>
         </header>
 
         <div class="card" id="setupCard">
@@ -56,6 +58,47 @@
             <p>Demo app • Secure keys should not be hard-coded in production.</p>
         </footer>
     </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal" style="display:none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚙️ Connection Settings</h2>
+                <button id="closeModal" class="close-btn" type="button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-description">Override the default Event Hub connection string. Changes are cached in your browser.</p>
+                <form id="settingsForm">
+                    <div class="form-group">
+                        <label for="connectionString">Event Hub Connection String</label>
+                        <textarea id="connectionString" name="connectionString" rows="4" placeholder="Endpoint=sb://...;SharedAccessKeyName=...;SharedAccessKey=...;EntityPath=..." required></textarea>
+                        <small class="form-hint">Must include EntityPath or specify hub name separately</small>
+                    </div>
+                    <div class="modal-status" id="settingsStatus"></div>
+                    <div class="modal-actions">
+                        <button type="submit" class="btn btn-primary">Apply Connection</button>
+                        <button type="button" id="revertBtn" class="btn btn-secondary">Revert to Default</button>
+                    </div>
+                </form>
+
+                <!-- QR Code Section -->
+                <div id="qrSection" class="qr-section" style="display:none;">
+                    <hr class="modal-divider">
+                    <h3>📱 Share Configuration</h3>
+                    <p class="modal-description">Scan this QR code to open the app with your custom connection string on another device.</p>
+                    <div class="qr-container">
+                        <div id="qrcode"></div>
+                    </div>
+                    <div class="share-url-section">
+                        <label class="share-url-label">Share URL:</label>
+                        <input type="text" id="shareUrl" class="share-url-input" readonly />
+                        <button type="button" id="copyUrlBtn" class="btn btn-secondary btn-sm">Copy</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>

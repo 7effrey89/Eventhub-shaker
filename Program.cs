@@ -65,9 +65,69 @@ app.MapPost("/api/telemetry", async (TelemetryEvent telemetry, EventHubService s
     }
 });
 
+app.MapPost("/api/telemetry-custom", async (CustomTelemetryRequest request) =>
+{
+    if (string.IsNullOrWhiteSpace(request.ConnectionString))
+        return Results.BadRequest("connectionString required");
+
+    // If telemetry is null, just validate the connection string
+    if (request.Telemetry == null)
+    {
+        try
+        {
+            // Test creating a producer client with the provided connection string
+            await using var testProducer = request.ConnectionString.Contains("EntityPath=", StringComparison.OrdinalIgnoreCase)
+                ? new EventHubProducerClient(request.ConnectionString)
+                : throw new ArgumentException("Connection string must include EntityPath");
+
+            // Verify we can get properties (this validates the connection)
+            var props = await testProducer.GetEventHubPropertiesAsync();
+            Console.WriteLine($"Validated custom connection to hub: {props.Name}");
+            return Results.Ok(new { validated = true, hubName = props.Name });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"ERROR validating connection string: {ex.Message}");
+            return Results.BadRequest($"Invalid connection string: {ex.Message}");
+        }
+    }
+
+    // Send telemetry using the custom connection string
+    var telemetry = request.Telemetry;
+    if (string.IsNullOrWhiteSpace(telemetry.UserName)) 
+        return Results.BadRequest("userName required");
+
+    telemetry.ServerTimestamp = DateTime.UtcNow;
+    try
+    {
+        await using var producer = request.ConnectionString.Contains("EntityPath=", StringComparison.OrdinalIgnoreCase)
+            ? new EventHubProducerClient(request.ConnectionString)
+            : throw new ArgumentException("Connection string must include EntityPath");
+
+        var json = JsonSerializer.Serialize(telemetry, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var data = new EventData(Encoding.UTF8.GetBytes(json));
+        using var batch = await producer.CreateBatchAsync();
+        if (!batch.TryAdd(data))
+        {
+            await producer.SendAsync(new[] { data });
+        }
+        else
+        {
+            await producer.SendAsync(batch);
+        }
+        return Results.Accepted();
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"ERROR sending telemetry with custom connection: {ex.Message}");
+        return Results.Problem($"Send failed: {ex.Message}", statusCode: 500);
+    }
+});
+
 app.Run();
 
 // Models
+public record CustomTelemetryRequest(string ConnectionString, TelemetryEvent? Telemetry);
 public record TelemetryEvent(
     DateTime Timestamp,
     string UserName,

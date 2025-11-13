@@ -2,6 +2,7 @@ const SHAKE_THRESHOLD = 15;
 const SHAKE_COOLDOWN = 500;
 const SHAKE_INTENSITY_HIGH = 25;
 const SHAKE_INTENSITY_MEDIUM = 18;
+const CUSTOM_CONNECTION_KEY = 'eventhub_custom_connection';
 
 let state = {
     active: false,
@@ -9,8 +10,68 @@ let state = {
     eventCount: 0,
     lastAcceleration: { x: 0, y: 0, z: 0 },
     lastShakeTime: 0,
-    userName: ''
+    userName: '',
+    customConnection: null
 };
+
+// Load custom connection from localStorage
+function loadCustomConnection() {
+    const saved = localStorage.getItem(CUSTOM_CONNECTION_KEY);
+    if (saved) {
+        try {
+            state.customConnection = JSON.parse(saved);
+            return state.customConnection;
+        } catch {
+            localStorage.removeItem(CUSTOM_CONNECTION_KEY);
+        }
+    }
+    return null;
+}
+
+// Save custom connection to localStorage
+function saveCustomConnection(connectionString) {
+    const data = { connectionString, savedAt: new Date().toISOString() };
+    localStorage.setItem(CUSTOM_CONNECTION_KEY, JSON.stringify(data));
+    state.customConnection = data;
+}
+
+// Remove custom connection
+function clearCustomConnection() {
+    localStorage.removeItem(CUSTOM_CONNECTION_KEY);
+    state.customConnection = null;
+}
+
+// Initialize custom connection on load
+loadCustomConnection();
+
+// Check URL parameters for connection string
+function checkUrlParameters() {
+    const params = new URLSearchParams(window.location.search);
+    const connString = params.get('conn');
+    
+    if (connString) {
+        try {
+            // Decode the connection string from base64
+            const decoded = atob(connString);
+            
+            // Auto-apply the connection string
+            saveCustomConnection(decoded);
+            
+            // Show notification
+            log('info', 'Connection string loaded from URL and applied');
+            
+            // Clean up URL without reloading
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+        } catch (err) {
+            console.error('Failed to decode connection string from URL:', err);
+            log('error', 'Invalid connection string in URL');
+        }
+    }
+}
+
+// Run on page load
+checkUrlParameters();
 
 const setupCard = document.getElementById('setupCard');
 const monitorCard = document.getElementById('monitorCard');
@@ -26,6 +87,21 @@ const accelZEl = document.getElementById('accelZ');
 const accelMagEl = document.getElementById('accelMag');
 const eventLog = document.getElementById('eventLog');
 
+// Settings modal elements
+const settingsBtn = document.getElementById('settingsBtn');
+const settingsModal = document.getElementById('settingsModal');
+const closeModalBtn = document.getElementById('closeModal');
+const settingsForm = document.getElementById('settingsForm');
+const connectionStringInput = document.getElementById('connectionString');
+const revertBtn = document.getElementById('revertBtn');
+const settingsStatus = document.getElementById('settingsStatus');
+const qrSection = document.getElementById('qrSection');
+const qrCodeDiv = document.getElementById('qrcode');
+const shareUrlInput = document.getElementById('shareUrl');
+const copyUrlBtn = document.getElementById('copyUrlBtn');
+
+let qrCodeInstance = null;
+
 configForm.addEventListener('submit', async (e) => {
     e.preventDefault();
     state.userName = document.getElementById('userName').value.trim();
@@ -36,6 +112,129 @@ configForm.addEventListener('submit', async (e) => {
 
 stopBtn.addEventListener('click', () => stop());
 randomShakeBtn.addEventListener('click', () => simulateRandomShake());
+
+// Settings modal handlers
+settingsBtn.addEventListener('click', () => openSettingsModal());
+closeModalBtn.addEventListener('click', () => closeSettingsModal());
+settingsModal.addEventListener('click', (e) => {
+    if (e.target === settingsModal) closeSettingsModal();
+});
+
+settingsForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const connectionString = connectionStringInput.value.trim();
+    if (!connectionString) return;
+    
+    showSettingsStatus('info', 'Validating connection...');
+    
+    try {
+        // Test the connection by sending to the new endpoint
+        const testPayload = {
+            connectionString,
+            telemetry: null // Just validate, don't send
+        };
+        
+        const res = await fetch('/api/telemetry-custom', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(testPayload)
+        });
+        
+        if (res.ok) {
+            saveCustomConnection(connectionString);
+            showSettingsStatus('success', '✓ Connection string saved and validated!');
+            generateQRCode(connectionString);
+            // Don't auto-close so user can see/scan QR code
+        } else {
+            const error = await res.text();
+            showSettingsStatus('error', `Failed to validate: ${error}`);
+        }
+    } catch (err) {
+        showSettingsStatus('error', `Network error: ${err.message}`);
+    }
+});
+
+revertBtn.addEventListener('click', () => {
+    clearCustomConnection();
+    connectionStringInput.value = '';
+    showSettingsStatus('success', '✓ Reverted to default connection string');
+    qrSection.style.display = 'none';
+    setTimeout(() => closeSettingsModal(), 1500);
+});
+
+copyUrlBtn.addEventListener('click', async () => {
+    try {
+        await navigator.clipboard.writeText(shareUrlInput.value);
+        const originalText = copyUrlBtn.textContent;
+        copyUrlBtn.textContent = 'Copied!';
+        setTimeout(() => {
+            copyUrlBtn.textContent = originalText;
+        }, 2000);
+    } catch (err) {
+        // Fallback for older browsers
+        shareUrlInput.select();
+        document.execCommand('copy');
+        copyUrlBtn.textContent = 'Copied!';
+        setTimeout(() => {
+            copyUrlBtn.textContent = 'Copy';
+        }, 2000);
+    }
+});
+
+function openSettingsModal() {
+    if (state.customConnection) {
+        connectionStringInput.value = state.customConnection.connectionString;
+        generateQRCode(state.customConnection.connectionString);
+    } else {
+        qrSection.style.display = 'none';
+    }
+    settingsModal.style.display = 'flex';
+    settingsStatus.className = 'modal-status';
+    settingsStatus.textContent = '';
+}
+
+function closeSettingsModal() {
+    settingsModal.style.display = 'none';
+    connectionStringInput.value = '';
+    settingsStatus.className = 'modal-status';
+    settingsStatus.textContent = '';
+    qrSection.style.display = 'none';
+}
+
+function showSettingsStatus(type, message) {
+    settingsStatus.className = `modal-status ${type}`;
+    settingsStatus.textContent = message;
+}
+
+function generateQRCode(connectionString) {
+    // Generate URL with encoded connection string
+    const baseUrl = window.location.origin + window.location.pathname;
+    const encoded = btoa(connectionString); // Base64 encode
+    const shareUrl = `${baseUrl}?conn=${encodeURIComponent(encoded)}`;
+    
+    // Update share URL input
+    shareUrlInput.value = shareUrl;
+    
+    // Clear existing QR code
+    qrCodeDiv.innerHTML = '';
+    
+    // Generate new QR code
+    try {
+        qrCodeInstance = new QRCode(qrCodeDiv, {
+            text: shareUrl,
+            width: 200,
+            height: 200,
+            colorDark: "#000000",
+            colorLight: "#ffffff",
+            correctLevel: QRCode.CorrectLevel.M
+        });
+        
+        qrSection.style.display = 'block';
+    } catch (err) {
+        console.error('Failed to generate QR code:', err);
+        showSettingsStatus('error', 'Failed to generate QR code');
+    }
+}
 
 async function requestMotionPermission() {
     if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
@@ -150,15 +349,31 @@ async function sendTelemetry(accel, delta, mag, deltaMag, simulated = false) {
     };
 
     try {
-        const res = await fetch('/api/telemetry', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
+        let res;
+        // Use custom endpoint if custom connection is configured
+        if (state.customConnection) {
+            res = await fetch('/api/telemetry-custom', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    connectionString: state.customConnection.connectionString,
+                    telemetry: payload
+                })
+            });
+        } else {
+            // Use default endpoint
+            res = await fetch('/api/telemetry', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+        }
+        
         if (res.ok) {
             state.eventCount++;
             eventCountEl.textContent = state.eventCount;
-            log('success', `${simulated ? 'Simulated' : 'Real'} shake sent (?${deltaMag.toFixed(2)} m/s�, ${intensity})`);
+            const source = state.customConnection ? ' (custom)' : '';
+            log('success', `${simulated ? 'Simulated' : 'Real'} shake sent (Δ${deltaMag.toFixed(2)} m/s², ${intensity})${source}`);
         } else {
             log('error', `Send failed HTTP ${res.status}`);
         }

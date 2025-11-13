@@ -69,3 +69,53 @@ form { display:flex; flex-direction:column; gap:1rem; }
 
 /* Safe area for iOS */
 body { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Settings button */
+header { position:relative; }
+.settings-btn { position:absolute; top:0; right:0; background:#334155; border:none; width:42px; height:42px; border-radius:50%; font-size:1.3rem; cursor:pointer; transition: var(--trans); display:flex; align-items:center; justify-content:center; }
+.settings-btn:hover { background:#475569; transform:rotate(45deg); }
+.settings-btn:active { transform:scale(.9); }
+
+/* Modal */
+.modal { position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,.85); z-index:9999; display:flex; align-items:center; justify-content:center; padding:1rem; animation: fadeIn .3s ease; }
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.modal-content { background: var(--card-bg); border:1px solid #334155; border-radius: var(--radius); max-width:600px; width:100%; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.8); animation: slideUp .3s ease; }
+@keyframes slideUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
+
+.modal-header { display:flex; align-items:center; justify-content:space-between; padding:1.2rem 1.4rem; border-bottom:1px solid #334155; }
+.modal-header h2 { margin:0; font-size:1.3rem; }
+
+.close-btn { background:transparent; border:none; color: var(--muted); font-size:2rem; cursor:pointer; line-height:1; padding:0; width:32px; height:32px; display:flex; align-items:center; justify-content:center; border-radius:8px; transition: var(--trans); }
+.close-btn:hover { background:#475569; color:var(--text); }
+
+.modal-body { padding:1.4rem; }
+.modal-description { margin:0 0 1.2rem; color: var(--muted); font-size:.9rem; }
+
+.modal-body textarea { width:100%; padding:.85rem .9rem; border-radius:12px; border:1px solid #475569; background:#0f1c30; color:var(--text); font-size:.85rem; font-family:monospace; resize:vertical; }
+.modal-body textarea:focus { outline:2px solid var(--accent); outline-offset:1px; }
+
+.form-hint { display:block; margin-top:.4rem; font-size:.75rem; color: var(--muted); font-style:italic; }
+
+.modal-status { margin:1rem 0; padding:.75rem; border-radius:10px; font-size:.85rem; display:none; }
+.modal-status.success { display:block; background:#065f46; color:#d1fae5; }
+.modal-status.error { display:block; background:#7f1d1d; color:#fee2e2; }
+.modal-status.info { display:block; background:#1e3a8a; color:#bfdbfe; }
+
+.modal-actions { display:flex; gap:.75rem; flex-wrap:wrap; }
+
+/* QR Code Section */
+.modal-divider { border:none; border-top:1px solid #334155; margin:1.5rem 0; }
+
+.qr-section h3 { font-size:1.1rem; margin-bottom:.5rem; }
+
+.qr-container { display:flex; justify-content:center; padding:1rem; background:#fff; border-radius:12px; margin:1rem 0; }
+.qr-container canvas { max-width:100%; height:auto; }
+
+.share-url-section { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+.share-url-label { font-size:.85rem; font-weight:600; text-transform:uppercase; letter-spacing:.5px; color: var(--muted); flex-shrink:0; }
+.share-url-input { flex:1; min-width:200px; padding:.6rem .75rem; border-radius:10px; border:1px solid #475569; background:#0f1c30; color:var(--text); font-size:.8rem; font-family:monospace; }
+.share-url-input:focus { outline:2px solid var(--accent); outline-offset:1px; }
+
+.btn-sm { padding:.6rem .9rem; font-size:.85rem; }
+
