@@ -20,7 +20,7 @@ Collect phone shake telemetry in a mobile browser and stream events to Azure Eve
 1. Create an Eventstream in Fabric.
 2. Choose Custom endpoint with Event Hub compatible API.
 3. For the Source 
-3. For the Destination of the eventstream, choose to create a new table (e.g. shakertable) in an already created Eventhouse
+3. For the Destination of the eventstream, choose to create a new table (e.g. shakertable - do not use names with hyphen shakertable-001) in an already created Eventhouse
 4. Publish
 5. Once published get the connection details
 6. Click on the source of the eventstream
