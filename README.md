@@ -202,6 +202,24 @@ shakertable
         series=userName
     )
 ```
+Or if you need a less history in graph
+```KQL
+shakertable
+| extend timestamp_dt = todatetime(timestamp)
+| project timestamp_dt, accelerationValue, userName
+| order by timestamp_dt desc
+| top 20 by timestamp_dt
+| render timechart 
+    with (
+        title="Acceleration Value Over Time by User",
+        xtitle="Timestamp",
+        ytitle="Acceleration Value",
+        ysplit=none,
+        xcolumn=timestamp_dt,
+        ycolumns=accelerationValue,
+        series=userName
+    )
+```
 
 ## Interesting facts:
 - Why is the magnitude around ~9.79 m/s² When the Device is Still?
