@@ -203,6 +203,8 @@ shakertable
     )
 ```
 Or if you need a less history in graph
+<img width="625" height="402" alt="image" src="https://github.com/user-attachments/assets/05f31ab1-54eb-489e-8c02-4cae12a9b5d0" />
+
 ```KQL
 shakertable
 | extend timestamp_dt = todatetime(timestamp)
@@ -219,6 +221,16 @@ shakertable
         ycolumns=accelerationValue,
         series=userName
     )
+```
+
+Or if you want to aggregate the values by name - so the more they shake the taller the vertical bars on the graph
+<img width="756" height="437" alt="image" src="https://github.com/user-attachments/assets/36b474b1-8456-4445-b90d-282336481295" />
+
+```KQL
+shakertable
+| summarize totalDeltaAcceleration = sum(toint(deltaAccelerationValue)) by userName
+| sort by totalDeltaAcceleration desc
+| render columnchart
 ```
 
 ## Interesting facts:
