@@ -203,6 +203,7 @@ shakertable
     )
 ```
 Or if you need a less history in graph
+
 <img width="625" height="402" alt="image" src="https://github.com/user-attachments/assets/05f31ab1-54eb-489e-8c02-4cae12a9b5d0" />
 
 ```KQL
